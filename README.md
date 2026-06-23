@@ -1,95 +1,108 @@
-# shopping-assistant
+# Kaggle Shopping Assistant
 
-Simple ReAct agent
-Agent generated with `agents-cli` version `0.5.0`
+A secure, multi-tool AI Retail Companion built using the Agent Development Kit (ADK 2.0). 
 
-## Project Structure
-
-```
-shopping-assistant/
-├── app/         # Core agent code
-│   ├── agent.py               # Main agent logic
-│   └── app_utils/             # App utilities and helpers
-├── tests/                     # Unit, integration, and load tests
-├── GEMINI.md                  # AI-assisted development guide
-└── pyproject.toml             # Project dependencies
-```
-
-> 💡 **Tip:** Use [Gemini CLI](https://github.com/google-gemini/gemini-cli) for AI-assisted development - project context is pre-configured in `GEMINI.md`.
-
-## Requirements
-
-Before you begin, ensure you have:
-- **uv**: Python package manager (used for all dependency management in this project) - [Install](https://docs.astral.sh/uv/getting-started/installation/) ([add packages](https://docs.astral.sh/uv/concepts/dependencies/) with `uv add <package>`)
-- **agents-cli**: Agents CLI - Install with `uv tool install google-agents-cli`
-- **Google Cloud SDK**: For GCP services - [Install](https://cloud.google.com/sdk/docs/install)
-
-
-## Quick Start
-
-Install `agents-cli` and its skills if not already installed:
-
-```bash
-uvx google-agents-cli setup
-```
-
-Install required packages:
-
-```bash
-agents-cli install
-```
-
-Test the agent with a local web server:
-
-```bash
-agents-cli playground
-```
-
-You can also use features from the [ADK](https://adk.dev/) CLI with `uv run adk`.
-
-## Commands
-
-| Command              | Description                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `agents-cli install` | Install dependencies using uv                                                         |
-| `agents-cli playground` | Launch local development environment                                                  |
-| `agents-cli lint`    | Run code quality checks                                                               |
-| `agents-cli eval`    | Evaluate agent behavior (generate, grade, analyze, and more — see `agents-cli eval --help`) |
-| `uv run pytest tests/unit tests/integration` | Run unit and integration tests                                                        |
-
-## 🛠️ Project Management
-
-| Command | What It Does |
-|---------|--------------|
-| `agents-cli scaffold enhance` | Add CI/CD pipelines and Terraform infrastructure |
-| `agents-cli infra cicd` | One-command setup of entire CI/CD pipeline + infrastructure |
-| `agents-cli scaffold upgrade` | Auto-upgrade to latest version while preserving customizations |
+This project was developed as part of the Kaggle 5-Day AI Agents: Intensive Vibe Coding Course With Google.
 
 ---
 
-## Development
+## Overview
 
-Edit your agent logic in `app/agent.py` and test with `agents-cli playground` - it auto-reloads on save.
+Kaggle Shopping Assistant is an intelligent, conversational store agent designed to guide retail customers through checkout, manage coupon promotions, and award loyalty points. 
 
-## Deployment
-
-```bash
-gcloud config set project <your-project-id>
-agents-cli deploy
-```
-
-To add CI/CD and Terraform, run `agents-cli scaffold enhance`.
-To set up your production infrastructure, run `agents-cli infra cicd`.
-
-## Observability
-
-Built-in telemetry exports to Cloud Trace, BigQuery, and Cloud Logging.
+Beyond customer-facing capabilities, the project serves as a reference implementation for security-first agent design, featuring strict input validation, pre-commit credential gates, and runtime command-filtering hooks.
 
 ---
 
-## 📷 Reference Screenshot
+## Core Capabilities & Tools
+
+The agent is equipped with four core tools implemented in app/agent.py:
+
+*   **`process_cart_checkout`**: Checks out active shopping carts, validates ownership, applies discounts, computes final totals, and triggers point rewards.
+*   **`redeem_discount_code`**: Redeems single-use discount codes (e.g., `WELCOME50`, `SUMMER20`) while enforcing registration checks and single-use limits.
+*   **`award_loyalty_points`**: Automatically adds transaction-based loyalty points to customer accounts.
+*   **`update_discount_status`**: Gated administrative tool allowing authorized users to activate or deactivate discount codes dynamically.
+
+---
+
+## Security & Safety Guardrails
+
+This project implements advanced safety mechanisms to secure AI agent interactions and prevent common vulnerabilities:
+
+### 1. Input Gating & Pydantic Validation
+All tool parameters are validated against strict Pydantic schemas (such as `ProcessCartCheckoutInput` and `AwardLoyaltyPointsInput`) to prevent prompt injections from passing malformed parameters or exploiting variables.
+
+### 2. PreToolUse Hook (Command Filtering)
+Configured in `.agents/hooks.json`, a custom python safety guard `.agents/scripts/validate_tool_call.py` intercepts all `run_command` invocations. It scans for dangerous shell patterns (such as `rm -rf /`, destructive `dd` commands, or filesystem creations) and blocks execution if matches are found.
+
+### 3. Pre-Commit Credential Scanning
+Integrated via `.pre-commit-config.yaml` and `.semgrep/rules.yaml`, the repository runs automated local scans on every `git commit`. It automatically flags hardcoded Google API credentials (prefixed with `AIzaSy...`) in source files, forcing secure developer habits.
+
+### 4. STRIDE Threat Model
+A complete threat model mapping trust boundaries, threat scenarios, and corresponding remediations is documented in `threat_model.md`.
+
+---
+
+## System Architecture & Data Flow
+
+Below is the conceptual architecture showing trust boundaries and tool dependencies (rendered natively):
+
+```mermaid
+graph TD
+    User([Customer / Client / Admin]) -->|Interact / Prompt| AgentAPI[FastAPI / App Endpoints]
+    AgentAPI -->|Inference / LLM Calls| Gemini[Gemini LLM]
+    AgentAPI -->|Execute Tool| ToolsList{Agent Tools}
+    
+    ToolsList -->|Redeem Discount| RedeemTool[redeem_discount_code]
+    ToolsList -->|Checkout Cart| CheckoutTool[process_cart_checkout]
+    ToolsList -->|Award Points| LoyaltyTool[award_loyalty_points]
+    ToolsList -->|Admin Control| AdminTool[update_discount_status]
+    
+    RedeemTool -->|Read/Write State| InMemoryStore[(In-Memory Store)]
+    CheckoutTool -->|Read/Write State| InMemoryStore
+    LoyaltyTool -->|Read/Write State| InMemoryStore
+    AdminTool -->|Read/Write State| InMemoryStore
+```
+
+---
+
+## Reference Screenshot
 
 ### Interactive Shopping Assistant (Playground UI)
 *Shows the agent successfully checking out an active cart, applying the `WELCOME50` discount code, and awarding loyalty points.*
 
-![Interactive Playground Chat Flow](images/playground_checkout.png)
+![Successful Playground Checkout](images/playground_checkout.png)
+
+---
+
+## Getting Started
+
+### Prerequisites
+*   **uv**: Fast Python package manager (https://docs.astral.sh/uv/getting-started/installation/)
+*   **agents-cli**: Google Agent CLI tool (`uv tool install google-agents-cli`)
+
+### Setup & Installation
+1.  Install dependencies:
+    ```bash
+    agents-cli install
+    ```
+2.  Install the pre-commit git hooks:
+    ```bash
+    uv run pre-commit install
+    ```
+3.  Set up your Google AI Studio API key in a `.env` file:
+    ```env
+    GEMINI_API_KEY=your_actual_api_key_here
+    ```
+
+### Running Locally
+To launch the interactive playground:
+```bash
+agents-cli playground
+```
+
+### Running Tests
+To run the full suite of 19 unit and security tests:
+```bash
+uv run pytest tests/test_agent.py tests/unit/test_agent.py
+```
