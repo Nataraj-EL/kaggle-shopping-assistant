@@ -84,3 +84,12 @@ To set up your production infrastructure, run `agents-cli infra cicd`.
 ## Observability
 
 Built-in telemetry exports to Cloud Trace, BigQuery, and Cloud Logging.
+
+---
+
+## 📷 Reference Screenshot
+
+### Interactive Shopping Assistant (Playground UI)
+*Shows the agent successfully checking out an active cart, applying the `WELCOME50` discount code, and awarding loyalty points.*
+
+![Interactive Playground Chat Flow](images/playground_checkout.png)
